@@ -268,8 +268,8 @@ typedef struct _channel_group_t {
 @property (nonatomic, strong) NSTimer *housekeepingTimer;
 #endif
 @property (nonatomic, strong) ABReceiverPort *audiobusReceiverPort;
-@property (nonatomic, strong) ABFilterPort *audiobusFilterPort;
-@property (nonatomic, strong) ABSenderPort *audiobusSenderPort;
+@property (nonatomic, strong) ABAudioFilterPort *audiobusFilterPort;
+@property (nonatomic, strong) ABAudioSenderPort *audiobusSenderPort;
 @property (nonatomic, strong) AEBlockChannel *audiobusMonitorChannel;
 @end
 
@@ -399,7 +399,7 @@ static OSStatus renderCallback(void *inRefCon, AudioUnitRenderActionFlags *ioAct
     
     THIS->_channelBeingRendered = NULL;
     
-    if ( channel->audiobusSenderPort && ABSenderPortIsConnected((__bridge id)channel->audiobusSenderPort) && channel->audiobusFloatConverter ) {
+    if ( channel->audiobusSenderPort && ABAudioSenderPortIsConnected((__bridge id)channel->audiobusSenderPort) && channel->audiobusFloatConverter ) {
         // Convert the audio to float, and apply volume/pan if necessary
         if ( AEFloatConverterToFloatBufferList((__bridge AEFloatConverter*)channel->audiobusFloatConverter, ioData, channel->audiobusScratchBuffer, inNumberFrames) ) {
             if ( fabs(1.0 - channel->volume) > 0.01 || fabs(0.0 - channel->pan) > 0.01 ) {
@@ -415,9 +415,9 @@ static OSStatus renderCallback(void *inRefCon, AudioUnitRenderActionFlags *ioAct
         }
         
         // Send via Audiobus
-        ABSenderPortSend((__bridge id)channel->audiobusSenderPort, channel->audiobusScratchBuffer, inNumberFrames, &timestamp);
+        ABAudioSenderPortSend((__bridge id)channel->audiobusSenderPort, channel->audiobusScratchBuffer, inNumberFrames, &timestamp);
         
-        if ( !ABSenderPortIsMuted((__bridge id)channel->audiobusSenderPort)
+        if ( !ABAudioSenderPortIsMuted((__bridge id)channel->audiobusSenderPort)
                 && upstreamChannelsMutedByAudiobus(channel)
                 && THIS->_audiobusMonitorBuffer ) {
             
@@ -429,7 +429,7 @@ static OSStatus renderCallback(void *inRefCon, AudioUnitRenderActionFlags *ioAct
         }
     }
     
-    if ( channel->audiobusSenderPort && ABSenderPortIsMuted((__bridge id)channel->audiobusSenderPort) && !upstreamChannelsConnectedToAudiobus(channel) ) {
+    if ( channel->audiobusSenderPort && ABAudioSenderPortIsMuted((__bridge id)channel->audiobusSenderPort) && !upstreamChannelsConnectedToAudiobus(channel) ) {
         // Silence output
         *ioActionFlags |= kAudioUnitRenderAction_OutputIsSilence;
         for ( int i=0; i<ioData->mNumberBuffers; i++ ) memset(ioData->mBuffers[i].mData, 0, ioData->mBuffers[i].mDataByteSize);
@@ -2132,10 +2132,10 @@ NSTimeInterval AEAudioControllerOutputLatency(__unsafe_unretained AEAudioControl
         AEChannelRef channelBeingRendered = THIS->_channelBeingRendered;
         if ( !channelBeingRendered ) channelBeingRendered = THIS->_topChannel;
         
-        __unsafe_unretained ABSenderPort * upstreamSenderPort = (__bridge ABSenderPort*)firstUpstreamAudiobusSenderPort(channelBeingRendered);
-        if ( upstreamSenderPort && ABSenderPortIsMuted(upstreamSenderPort) ) {
+        __unsafe_unretained ABAudioSenderPort * upstreamSenderPort = (__bridge ABAudioSenderPort*)firstUpstreamAudiobusSenderPort(channelBeingRendered);
+        if ( upstreamSenderPort && ABAudioSenderPortIsMuted(upstreamSenderPort) ) {
             // We're sending via the sender port, and the receiver plays live - offset the timestamp by the reported latency
-            return ABSenderPortGetAverageLatency(upstreamSenderPort);
+            return ABAudioSenderPortGetAverageLatency(upstreamSenderPort);
         }
     }
     
@@ -2181,12 +2181,12 @@ AudioTimeStamp AEAudioControllerCurrentAudioTimestamp(__unsafe_unretained AEAudi
     }
 }
 
--(void)setAudiobusSenderPort:(ABSenderPort *)audiobusSenderPort {
+-(void)setAudiobusSenderPort:(ABAudioSenderPort *)audiobusSenderPort {
     if ( _topChannel->audiobusSenderPort == (__bridge void *)audiobusSenderPort ) return;
     
     if ( [(id<AEAudiobusForwardDeclarationsProtocol>)audiobusSenderPort audioUnit] == _ioAudioUnit ) {
-        NSLog(@"TAAE: You cannot use ABSenderPort's audio unit initialiser with TAAE.\n"
-               "Either (a) use ABSenderPort's audio unit initialiser, and don't use the audiobusSenderPort property or "
+        NSLog(@"TAAE: You cannot use ABAudioSenderPort's audio unit initialiser with TAAE.\n"
+               "Either (a) use ABAudioSenderPort's audio unit initialiser, and don't use the audiobusSenderPort property or "
                "(b) use the audio unit initialiser but don't use the audiobusSenderProperty, but not both.\n");
         abort();
     }
@@ -2194,15 +2194,15 @@ AudioTimeStamp AEAudioControllerCurrentAudioTimestamp(__unsafe_unretained AEAudi
     [self setAudiobusSenderPort:audiobusSenderPort forChannelElement:_topChannel];
 }
 
-- (ABSenderPort*)audiobusSenderPort {
-    return (__bridge ABSenderPort *)(_topChannel->audiobusSenderPort);
+- (ABAudioSenderPort*)audiobusSenderPort {
+    return (__bridge ABAudioSenderPort *)(_topChannel->audiobusSenderPort);
 }
 
--(void)setAudiobusSenderPort:(ABSenderPort *)audiobusSenderPort forChannelElement:(AEChannelRef)channelElement {
+-(void)setAudiobusSenderPort:(ABAudioSenderPort *)audiobusSenderPort forChannelElement:(AEChannelRef)channelElement {
     if ( channelElement->audiobusSenderPort == (__bridge void*)audiobusSenderPort ) return;
     
     if ( [(id<AEAudiobusForwardDeclarationsProtocol>)audiobusSenderPort audioUnit] == _ioAudioUnit ) {
-        NSLog(@"TAAE: You cannot use ABSenderPort's audio unit initialiser with TAAE.");
+        NSLog(@"TAAE: You cannot use ABAudioSenderPort's audio unit initialiser with TAAE.");
         abort();
     }
     
@@ -2255,14 +2255,14 @@ AudioTimeStamp AEAudioControllerCurrentAudioTimestamp(__unsafe_unretained AEAudi
     }
 }
 
--(void)setAudiobusSenderPort:(ABSenderPort *)senderPort forChannel:(id<AEAudioPlayable>)channel {
+-(void)setAudiobusSenderPort:(ABAudioSenderPort *)senderPort forChannel:(id<AEAudioPlayable>)channel {
     int index;
     AEChannelGroupRef group = [self searchForGroupContainingChannelMatchingPtr:channel.renderCallback userInfo:(__bridge void*)channel index:&index];
     if ( !group ) return;
     [self setAudiobusSenderPort:senderPort forChannelElement:group->channels[index]];
 }
 
--(void)setAudiobusSenderPort:(ABSenderPort *)senderPort forChannelGroup:(AEChannelGroupRef)channelGroup {
+-(void)setAudiobusSenderPort:(ABAudioSenderPort *)senderPort forChannelGroup:(AEChannelGroupRef)channelGroup {
     [self setAudiobusSenderPort:senderPort forChannelElement:channelGroup->channel];
 }
 
@@ -4183,7 +4183,7 @@ static BOOL upstreamChannelsMutedByAudiobus(AEChannelRef channel) {
     if ( !channel->parentGroup ) return NO;
     
     AEChannelRef parentGroupChannel = channel->parentGroup->channel;
-    if ( parentGroupChannel->audiobusSenderPort && ABSenderPortIsMuted((__bridge id)parentGroupChannel->audiobusSenderPort) ) {
+    if ( parentGroupChannel->audiobusSenderPort && ABAudioSenderPortIsMuted((__bridge id)parentGroupChannel->audiobusSenderPort) ) {
         return YES;
     }
     
@@ -4194,7 +4194,7 @@ static BOOL upstreamChannelsConnectedToAudiobus(AEChannelRef channel) {
     if ( !channel->parentGroup ) return NO;
     
     AEChannelRef parentGroupChannel = channel->parentGroup->channel;
-    if ( parentGroupChannel->audiobusSenderPort && ABSenderPortIsConnected((__bridge id)parentGroupChannel->audiobusSenderPort) ) {
+    if ( parentGroupChannel->audiobusSenderPort && ABAudioSenderPortIsConnected((__bridge id)parentGroupChannel->audiobusSenderPort) ) {
         return YES;
     }
     

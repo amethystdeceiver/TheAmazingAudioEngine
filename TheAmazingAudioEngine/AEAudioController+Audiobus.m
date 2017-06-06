@@ -35,27 +35,27 @@ __attribute__((weak)) BOOL ABReceiverPortIsConnected(ABReceiverPort *receiverPor
     return NO;
 }
 
-__attribute__((weak)) BOOL ABFilterPortIsConnected(ABFilterPort *filterPort) {
-    printf("ABFilterPortIsConnected stub called\n");
+__attribute__((weak)) BOOL ABAudioFilterPortIsConnected(ABAudioFilterPort *filterPort) {
+    printf("ABAudioFilterPortIsConnected stub called\n");
     return NO;
 }
 
-__attribute__((weak)) void ABSenderPortSend(ABSenderPort* senderPort, const AudioBufferList *audio, UInt32 lengthInFrames, const AudioTimeStamp *timestamp) {
-    printf("ABSenderPortSend stub called\n");
+__attribute__((weak)) void ABAudioSenderPortSend(ABAudioSenderPort* senderPort, const AudioBufferList *audio, UInt32 lengthInFrames, const AudioTimeStamp *timestamp) {
+    printf("ABAudioSenderPortSend stub called\n");
 }
 
-__attribute__((weak)) BOOL ABSenderPortIsConnected(ABSenderPort *senderPort) {
-    printf("ABSenderPortIsConnected stub called\n");
+__attribute__((weak)) BOOL ABAudioSenderPortIsConnected(ABAudioSenderPort *senderPort) {
+    printf("ABAudioSenderPortIsConnected stub called\n");
     return NO;
 }
 
-__attribute__((weak)) BOOL ABSenderPortIsMuted(ABSenderPort *senderPort) {
-    printf("ABSenderPortIsMuted stub called\n");
+__attribute__((weak)) BOOL ABAudioSenderPortIsMuted(ABAudioSenderPort *senderPort) {
+    printf("ABAudioSenderPortIsMuted stub called\n");
     return NO;
 }
 
-__attribute__((weak)) NSTimeInterval ABSenderPortGetAverageLatency(ABSenderPort *senderPort) {
-    printf("ABSenderPortGetAverageLatency stub called\n");
+__attribute__((weak)) NSTimeInterval ABAudioSenderPortGetAverageLatency(ABAudioSenderPort *senderPort) {
+    printf("ABAudioSenderPortGetAverageLatency stub called\n");
     return 0;
 }
 
